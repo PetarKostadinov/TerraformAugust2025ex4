@@ -5,7 +5,15 @@ terraform {
       version = "4.39.0"
     }
   }
+
+  backend "azurerm" {
+    resource_group_name  = "StorageRG"
+    storage_account_name = "taskboardstoragepk"
+    container_name       = "taskboardcontainerpk"
+    key                  = "terraform.tfstate"
+  }
 }
+
 
 provider "azurerm" {
   features {
@@ -55,9 +63,10 @@ resource "azurerm_linux_web_app" "example" {
 }
 
 resource "azurerm_app_service_source_control" "example" {
-  app_id   = azurerm_linux_web_app.example.id
-  repo_url = var.repo_URL
-  branch   = var.branch_name
+  app_id                 = azurerm_linux_web_app.example.id
+  repo_url               = var.repo_URL
+  branch                 = var.branch_name
+  use_manual_integration = true
 }
 
 resource "azurerm_mssql_server" "example" {
