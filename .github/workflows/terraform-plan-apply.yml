@@ -1,8 +1,8 @@
-name: Terraform Plan Apply
+name: 'Terraform Plan Apply'
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
 
 jobs:
@@ -14,11 +14,12 @@ jobs:
       ARM_CLIENT_SECRET:    ${{ secrets.AZURE_CLIENT_SECRET }}
       ARM_TENANT_ID:        ${{ secrets.AZURE_TENANT_ID }}
       ARM_SUBSCRIPTION_ID:  ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Azure login
+      - name: Login to Azure
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
@@ -32,7 +33,7 @@ jobs:
       - name: Terraform Plan (save to file)
         run: terraform plan -out=tfplan
 
-      - name: Make human-readable plan
+      - name: Make plan readable
         run: terraform show -no-color tfplan > tfplan.txt
 
       - name: Upload plan artifacts
@@ -42,25 +43,25 @@ jobs:
           path: |
             tfplan
             tfplan.txt
-          if-no-files-found: error
           retention-days: 7
+          if-no-files-found: error
 
   terraform-apply:
     name: Terraform Apply
+    needs: terraform-plan
     runs-on: ubuntu-latest
-    needs: [terraform-plan]
-    # Only auto-apply on push to main (never on PRs)
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     env:
       ARM_CLIENT_ID:        ${{ secrets.AZURE_CLIENT_ID }}
       ARM_CLIENT_SECRET:    ${{ secrets.AZURE_CLIENT_SECRET }}
       ARM_TENANT_ID:        ${{ secrets.AZURE_TENANT_ID }}
       ARM_SUBSCRIPTION_ID:  ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Azure login
+      - name: Login to Azure
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
@@ -71,14 +72,11 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
-      - name: Download Terraform Plan
+      - name: Download plan artifact
         uses: actions/download-artifact@v4
         with:
           name: terraform-plan
-          path: ./_plan
-
-      - name: Show downloaded files (debug)
-        run: ls -laR _plan
+          path: .
 
       - name: Terraform Apply (approved plan)
-        run: terraform apply -input=false -auto-approve ./_plan/tfplan
+        run: terraform apply -input=false -auto-approve tfplan
